@@ -51,7 +51,6 @@
     "feedparser": "1.1.4",
     "https-proxy-agent": "^5.0.1",
     "node-fetch": "2",
-    "request": "^2.88.2"
   },
   "nyc": {
     "all": true,
