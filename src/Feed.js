@@ -105,6 +105,12 @@ class Feed {
      */
     this.maxHistoryLength; // eslint-disable-line no-unused-expressions
 
+    /**
+     * Whether to skip the first load for this specific feed
+     * @type {boolean|null}
+     */
+    this.skipFirstLoad; // eslint-disable-line no-unused-expressions
+
     ({
       items: this.items,
       url: this.url,
@@ -112,6 +118,7 @@ class Feed {
       userAgent: this.userAgent,
       eventName: this.eventName,
       oxylabsProxyString: this.oxylabsProxyString,
+      skipFirstLoad: this.skipFirstLoad,
     } = data);
 
     if (!this.items) this.items = [];
@@ -120,6 +127,7 @@ class Feed {
     if (!this.userAgent) this.userAgent = DEFAULT_UA;
     if (!this.eventName) this.eventName = "new-item";
     if (!this.oxylabsProxyString) this.oxylabsProxyString = null;
+    if (this.skipFirstLoad === undefined) this.skipFirstLoad = null;
   }
 
   /**

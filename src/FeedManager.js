@@ -1,9 +1,10 @@
-'use strict';
+"use strict";
 
 /* eslint-disable class-methods-use-this */
 
 // eslint-disable-next-line no-nested-ternary
-const sortBy = (key) => (a, b) => ((a[key] > b[key]) ? 1 : ((b[key] > a[key]) ? -1 : 0));
+const sortBy = (key) => (a, b) =>
+  a[key] > b[key] ? 1 : b[key] > a[key] ? -1 : 0;
 
 /**
  * Management class for feeds
@@ -42,9 +43,8 @@ class FeedManager {
    * @param  {Object} data data to sort items on
    */
   sortItemsByDate(data) {
-    data.items.sort(sortBy('date'));
+    data.items.sort(sortBy("date"));
   }
-
 
   /**
    * Truncated feed data fetched from web
@@ -79,12 +79,18 @@ class FeedManager {
    feed item list.
    * @private
    * @param  {FeedData} data data to mutate
-   * @param {boolean} firstload Whether or not this is the first laod
+   * @param {boolean} firstload Whether or not this is the first load
    */
   populateNewItemsInFeed(data, firstload) {
+    // Check feed-level skipFirstLoad first, fall back to instance-level
+    const shouldSkip =
+      this.feed.skipFirstLoad !== null
+        ? this.feed.skipFirstLoad
+        : this.instance.skipFirstLoad;
+
     data.newItems.forEach((item) => {
       this.feed.addItem(item);
-      if (!(firstload && this.instance.skipFirstLoad)) {
+      if (!(firstload && shouldSkip)) {
         this.instance.emit(this.feed.eventName, item);
       }
     });
@@ -96,7 +102,7 @@ class FeedManager {
    * @param  {FeedError} error handle error
    */
   onError(error) {
-    this.instance.emit('error', error);
+    this.instance.emit("error", error);
   }
 
   /**
@@ -115,8 +121,18 @@ class FeedManager {
     this.sortItemsByDate(data);
     this.identifyNewItems(data);
     this.populateNewItemsInFeed(data, firstload);
-    if (firstload && !this.instance.skipFirstLoad) {
-      this.instance.emit(`initial-load:${this.feed.url}`, { url: this.feed.url, items: this.feed.items });
+
+    // Check feed-level skipFirstLoad first, fall back to instance-level
+    const shouldSkip =
+      this.feed.skipFirstLoad !== null
+        ? this.feed.skipFirstLoad
+        : this.instance.skipFirstLoad;
+
+    if (firstload && !shouldSkip) {
+      this.instance.emit(`initial-load:${this.feed.url}`, {
+        url: this.feed.url,
+        items: this.feed.items,
+      });
     }
   }
 }
