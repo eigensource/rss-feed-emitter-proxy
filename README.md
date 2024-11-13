@@ -154,6 +154,25 @@ feeder.on("nintendo", function (item) {
 });
 ```
 
+You can also override the instance-level `skipFirstLoad` setting for individual feeds:
+
+```js
+const feeder = new RssFeedEmitter({ skipFirstLoad: true });
+
+// This feed will load existing items on first load
+feeder.add({
+  url: "http://www.nintendolife.com/feeds/news",
+  refresh: 2000,
+  skipFirstLoad: false,
+});
+
+// This feed will inherit instance-level skipFirstLoad: true
+feeder.add({
+  url: "http://some-other-feed.com/rss",
+  refresh: 2000,
+});
+```
+
 ### Adding an 'error' handler
 
 Handle error events by printing to console. This handler is needed to prevent unhandled exceptions from crashing the processes.

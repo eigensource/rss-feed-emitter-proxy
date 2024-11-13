@@ -1,7 +1,7 @@
 {
-  "name": "rss-feed-emitter",
-  "version": "3.0.0",
-  "description": "Super RSS News Feed aggregator written in Node.js and ES6",
+  "name": "rss-feed-emitter-proxy",
+  "version": "0.1.0",
+  "description": "Super RSS News Feed aggregator written in Node.js and ES6. Eigensource fork.",
   "main": "src/FeedEmitter.js",
   "types": "types/FeedEmitter.d.ts",
   "directories": {
@@ -50,7 +50,7 @@
   "dependencies": {
     "feedparser": "1.1.4",
     "https-proxy-agent": "^5.0.1",
-    "node-fetch": "2",
+    "node-fetch": "2"
   },
   "nyc": {
     "all": true,
