@@ -1,9 +1,10 @@
-'use strict';
+"use strict";
 
-const FeedParser = require('feedparser');
-const request = require('request');
-const FeedError = require('./FeedError');
-const FeedItem = require('./FeedItem'); // eslint-disable-line no-unused-vars
+const FeedParser = require("feedparser");
+const fetch = require("node-fetch");
+const createHttpsProxyAgent = require("https-proxy-agent");
+const FeedError = require("./FeedError");
+const FeedItem = require("./FeedItem"); // eslint-disable-line no-unused-vars
 
 /**
  * Map of specially handled error codes
@@ -30,13 +31,19 @@ const historyLengthMultiplier = 3;
  * Since static stuff doesn't work in older versions, keep using global const
  * @type {String}
  */
-const DEFAULT_UA = 'Node/RssFeedEmitter (https://github.com/filipedeschamps/rss-feed-emitter)';
+const DEFAULT_UA =
+  "Node/RssFeedEmitter (https://github.com/filipedeschamps/rss-feed-emitter)";
 
 /**
  * Allowed mime types to allow fetching
  * @type {Array<string>}
  */
-const ALLOWED_MIMES = ['text/html', 'application/xhtml+xml', 'application/xml', 'text/xml'];
+const ALLOWED_MIMES = [
+  "text/html",
+  "application/xhtml+xml",
+  "application/xml",
+  "text/xml",
+];
 
 /**
  * Storage object for properties of a feed
@@ -46,15 +53,16 @@ const ALLOWED_MIMES = ['text/html', 'application/xhtml+xml', 'application/xml', 
  * @property {number} refresh timeout between refreshes
  * @property {string} userAgent User Agent string to fetch the feed with
  * @property {string} eventName event name to use when emitting this feed
+ * @property {string|null} oxylabsProxyString Oxylabs proxy string to use when fetching the feed
  */
 class Feed {
   /**
    * Create a feed
-   * @param {Feed} data object with feed data
+   * @param {Object} data object with feed data
    */
   constructor(data) {
     /**
-     * Array of item
+     * Array of items
      * @type {FeedItem[]}
      */
     this.items; // eslint-disable-line no-unused-expressions
@@ -80,10 +88,16 @@ class Feed {
     this.userAgent; // eslint-disable-line no-unused-expressions
 
     /**
-     * event name for this feed to emit when a new item becomes available
+     * Event name for this feed to emit when a new item becomes available
      * @type {String}
      */
     this.eventName; // eslint-disable-line no-unused-expressions
+
+    /**
+     * Oxylabs proxy string to use when fetching the feed
+     * @type {string|null}
+     */
+    this.oxylabsProxyString; // eslint-disable-line no-unused-expressions
 
     /**
      * Maximum history length
@@ -92,15 +106,20 @@ class Feed {
     this.maxHistoryLength; // eslint-disable-line no-unused-expressions
 
     ({
-      items: this.items, url: this.url, refresh: this.refresh, userAgent: this.userAgent,
+      items: this.items,
+      url: this.url,
+      refresh: this.refresh,
+      userAgent: this.userAgent,
       eventName: this.eventName,
+      oxylabsProxyString: this.oxylabsProxyString,
     } = data);
 
     if (!this.items) this.items = [];
-    if (!this.url) throw new TypeError('missing required field `url`');
+    if (!this.url) throw new TypeError("missing required field `url`");
     if (!this.refresh) this.refresh = 60000;
     if (!this.userAgent) this.userAgent = DEFAULT_UA;
-    if (!this.eventName) this.eventName = 'new-item';
+    if (!this.eventName) this.eventName = "new-item";
+    if (!this.oxylabsProxyString) this.oxylabsProxyString = null;
   }
 
   /**
@@ -110,8 +129,8 @@ class Feed {
    * the feed item list. If there is, we know it's
    * not a new item.
    * @public
-   * @param {FeedItem} item item specitics
-   * @returns {FeedItem}      the matched element
+   * @param {FeedItem} item item specifics
+   * @returns {FeedItem} the matched element
    */
   findItem(item) {
     return this.items.find((entry) => {
@@ -136,32 +155,45 @@ class Feed {
   /**
    * Add an item to the feed
    * @public
-   * @param {FeedItem} item Feed item. Indeterminant structure.
+   * @param {FeedItem} item Feed item. Indeterminate structure.
    */
   addItem(item) {
     this.items.push(item);
-    this.items = this.items.slice(this.items.length - this.maxHistoryLength, this.items.length);
+    this.items = this.items.slice(
+      this.items.length - this.maxHistoryLength,
+      this.items.length
+    );
   }
 
   /**
    * Fetch the data for this feed
    * @public
-   * @returns {Promise} array of new feed items
+   * @returns {Promise<FeedItem[]>} array of new feed items
    */
   fetchData() {
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
       const items = [];
       const feedparser = new FeedParser();
-      feedparser.on('readable', () => {
-        const item = feedparser.read();
-        item.meta.link = this.url;
-        items.push(item);
+
+      feedparser.on("readable", () => {
+        let item;
+        while ((item = feedparser.read())) {
+          item.meta.link = this.url;
+          items.push(item);
+        }
       });
-      feedparser.on('error', () => {
-        this.handleError(new FeedError(`Cannot parse ${this.url} XML`, 'invalid_feed', this.url));
+
+      feedparser.on("error", () => {
+        this.handleError(
+          new FeedError(
+            `Cannot parse ${this.url} XML`,
+            "invalid_feed",
+            this.url
+          )
+        );
       });
-      feedparser.on('end', () => {
+
+      feedparser.on("end", () => {
         resolve(items);
       });
 
@@ -175,24 +207,43 @@ class Feed {
    * @param  {FeedParser} feedparser feedparser instance to use for parsing a retrieved feed
    */
   get(feedparser) {
-    request
-      .get({
-        url: this.url,
-        headers: {
-          'user-agent': this.userAgent,
-          accept: ALLOWED_MIMES.join(','),
-        },
-      })
-      .on('response', (res) => {
-        if (res.statusCode !== RESPONSE_CODES.OK) {
-          this.handleError(new FeedError(`This URL returned a ${res.statusCode} status code`, 'fetch_url_error', this.url));
+    let agent = null;
+
+    if (this.oxylabsProxyString) {
+      // Use the provided Oxylabs proxy string to create the proxy agent
+      agent = createHttpsProxyAgent(`http://${this.oxylabsProxyString}`);
+    }
+
+    fetch(this.url, {
+      method: "GET",
+      agent: agent,
+      headers: {
+        "User-Agent": this.userAgent,
+        Accept: ALLOWED_MIMES.join(","),
+      },
+    })
+      .then((res) => {
+        if (res.status !== RESPONSE_CODES.OK) {
+          this.handleError(
+            new FeedError(
+              `This URL returned a ${res.status} status code`,
+              "fetch_url_error",
+              this.url
+            )
+          );
+        } else {
+          res.body.pipe(feedparser);
         }
       })
-      .on('error', () => {
-        this.handleError(new FeedError(`Cannot connect to ${this.url}`, 'fetch_url_error', this.url));
-      })
-      .pipe(feedparser)
-      .on('end', () => {});
+      .catch((error) => {
+        this.handleError(
+          new FeedError(
+            `Cannot connect to ${this.url}: ${error.message}`,
+            "fetch_url_error",
+            this.url
+          )
+        );
+      });
   }
 
   /**

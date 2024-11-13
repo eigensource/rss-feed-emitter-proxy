@@ -1,17 +1,18 @@
-'use strict';
+"use strict";
 
-const { EventEmitter } = require('events');
+const { EventEmitter } = require("events");
 
-const FeedError = require('./FeedError');
-const FeedManager = require('./FeedManager');
-const Feed = require('./Feed');
+const FeedError = require("./FeedError");
+const FeedManager = require("./FeedManager");
+const Feed = require("./Feed");
 
 /**
  * Default UserAgent string
  * Since static stuff doesn't work in older versions, keep using global const
  * @type {String}
  */
-const DEFAULT_UA = 'Node/RssFeedEmitter (https://github.com/filipedeschamps/rss-feed-emitter)';
+const DEFAULT_UA =
+  "Node/RssFeedEmitter (https://github.com/filipedeschamps/rss-feed-emitter)";
 
 /**
  * Validate if the feed exists
@@ -19,7 +20,10 @@ const DEFAULT_UA = 'Node/RssFeedEmitter (https://github.com/filipedeschamps/rss-
  */
 const checkFeed = (feed) => {
   if (!feed) {
-    throw new FeedError('You must call #add method with a feed configuration object.', 'type_error');
+    throw new FeedError(
+      "You must call #add method with a feed configuration object.",
+      "type_error"
+    );
   }
 };
 
@@ -28,8 +32,11 @@ const checkFeed = (feed) => {
  * @param  {Feed} feed feed to validate url(s) for
  */
 const checkUrl = (feed) => {
-  if (!feed.url || !(typeof feed.url === 'string' || Array.isArray(feed.url))) {
-    throw new FeedError('Your configuration object should have an "url" key with a string or array value', 'type_error');
+  if (!feed.url || !(typeof feed.url === "string" || Array.isArray(feed.url))) {
+    throw new FeedError(
+      'Your configuration object should have an "url" key with a string or array value',
+      "type_error"
+    );
   }
 };
 
@@ -38,14 +45,17 @@ const checkUrl = (feed) => {
  * @param  {Feed} feed feed to validate refresh timeout for
  */
 const checkRefresh = (feed) => {
-  if (feed.refresh && typeof feed.refresh !== 'number') {
-    throw new FeedError('Your configuration object should have a "refresh" key with a number value', 'type_error');
+  if (feed.refresh && typeof feed.refresh !== "number") {
+    throw new FeedError(
+      'Your configuration object should have a "refresh" key with a number value',
+      "type_error"
+    );
   }
 };
 
 /**
  * MAIN CLASS
- * This is where we extend from TinyEmitter and absorve
+ * This is where we extend from EventEmitter and absorb
  * the #emit and #on methods to emit 'new-item' events
  * when we have new feed items.
  * @extends EventEmitter
@@ -65,11 +75,14 @@ class FeedEmitter extends EventEmitter {
   }
 
   /**
-   * The constructor special method is called everytime
+   * The constructor special method is called every time
    * we create a new instance of this "Class".
-   * @param {Object} [options={ userAgent: defaultUA }] [description]
+   * @param {Object} [options={}]
+   * @param {string} [options.userAgent] User Agent string to use for HTTP requests
+   * @param {boolean} [options.skipFirstLoad] Whether to skip the first load
+   * @param {string} [options.oxylabsProxyString] Oxylabs proxy string to use for all feeds
    */
-  constructor(options = { userAgent: DEFAULT_UA, skipFirstLoad: false }) {
+  constructor(options = {}) {
     super();
 
     /**
@@ -80,41 +93,42 @@ class FeedEmitter extends EventEmitter {
     this.feedList = [];
 
     /**
-     * If the user has specified a User Agent
-     * we will use that as the 'user-agent' header when
-     * making requests, otherwise we use the default option.
+     * User Agent string to use for HTTP requests
      * @private
      * @type {string}
      */
-    this.userAgent = options.userAgent;
+    this.userAgent = options.userAgent || DEFAULT_UA;
 
     /**
      * Whether or not to skip the normal emit event on first load
      * @private
      * @type {boolean}
      */
-    this.skipFirstLoad = options.skipFirstLoad;
-  }
+    this.skipFirstLoad = options.skipFirstLoad || false;
 
+    /**
+     * Oxylabs proxy string to use when fetching feeds
+     * @private
+     * @type {string|null}
+     */
+    this.oxylabsProxyString = options.oxylabsProxyString || null;
+  }
 
   /**
    * UserFeedConfig typedef
    * @typedef {Object} UserFeedConfig
-   * @property {(string|string[])} url Url string or string array. Cannot be null or empty
-   * @property {Number} refresh Refresh cycle duration for the feed.
-   * @property {string} [eventName] Event name for a new feed item. Default "new-item".
+   * @property {(string|string[])} url URL string or array of strings. Cannot be null or empty
+   * @property {number} [refresh] Refresh cycle duration for the feed in milliseconds
+   * @property {string} [eventName] Event name for a new feed item. Default is "new-item"
+   * @property {string} [userAgent] User Agent string for this feed
+   * @property {string} [oxylabsProxyString] Oxylabs proxy string for this feed
    */
 
   /**
    * ADD
-   * The #add method is one of the main ones. Basically it
-   * receives one parameter with the feed options, for example:
-   * {
-   *    url: "http://www.nintendolife.com/feeds/news",
-   *    refresh: 2000
-   *  }
+   * The #add method receives a feed configuration object and adds the feed to the emitter.
    * @public
-   * @param {UserFeedConfig[]} userFeedConfig user feed config
+   * @param {UserFeedConfig[]} userFeedConfig User feed configuration(s)
    * @returns {Feed[]}
    */
   add(...userFeedConfig) {
@@ -137,6 +151,10 @@ class FeedEmitter extends EventEmitter {
       return this.feedList;
     }
 
+    // Add oxylabsProxyString to config if not already set
+    config.oxylabsProxyString =
+      config.oxylabsProxyString || this.oxylabsProxyString;
+
     const feed = new Feed(config);
 
     this.addOrUpdateFeedList(feed);
@@ -146,15 +164,17 @@ class FeedEmitter extends EventEmitter {
 
   /**
    * REMOVE
-   * This is a very simple method and its functionality is
-   * remove a feed from the feedList.
+   * This method removes a feed from the feed list.
    * @public
-   * @param  {string} url   URL to add
-   * @returns {Feed}     item removed from list
+   * @param  {string} url URL of the feed to remove
+   * @returns {Feed} Feed that was removed
    */
   remove(url) {
-    if (typeof url !== 'string') {
-      throw new FeedError('You must call #remove with a string containing the feed url', 'type_error');
+    if (typeof url !== "string") {
+      throw new FeedError(
+        "You must call #remove with a string containing the feed URL",
+        "type_error"
+      );
     }
 
     const feed = this.findFeed({
@@ -167,26 +187,25 @@ class FeedEmitter extends EventEmitter {
   /**
    * List of feeds this emitter is handling
    * @public
-   * @returns {Feed[]} Feed arrray
+   * @returns {Feed[]} Array of feeds
    */
   get list() {
     return this.feedList;
   }
 
   /**
-   * Remove all feeds from feedList
+   * Remove all feeds from feed list
    * @public
    */
   destroy() {
     this.feedList.forEach((feed) => feed.destroy());
-    delete this.feedList;
     this.feedList = [];
   }
 
   /**
-   * Add or remove a feed in the feed list
+   * Add or update a feed in the feed list
    * @private
-   * @param {Feed} feed feed to be removed if it's present or added if it's not
+   * @param {Feed} feed Feed to be added or updated
    */
   addOrUpdateFeedList(feed) {
     const feedInList = this.findFeed(feed);
@@ -201,7 +220,7 @@ class FeedEmitter extends EventEmitter {
    * Find and return a feed
    * @private
    * @param  {UserFeedConfig} feed Feed to look up
-   * @returns {Feed | null}
+   * @returns {Feed | undefined}
    */
   findFeed(feed) {
     return this.feedList.find((feedEntry) => feedEntry.url === feed.url);
@@ -213,7 +232,7 @@ class FeedEmitter extends EventEmitter {
    *  - Clear feed items list
    *  - Create an interval for the feed
    * @private
-   * @param {Feed} feed feed to be added
+   * @param {Feed} feed Feed to be added
    */
   addToFeedList(feed) {
     feed.items = [];
@@ -225,8 +244,8 @@ class FeedEmitter extends EventEmitter {
   /**
    * Set up a recurring task to check for new items
    * @private
-   * @param  {Object} feed Feed to be removed
-   * @returns {Interval}      interval for updating the feed
+   * @param  {Feed} feed Feed to set interval for
+   * @returns {NodeJS.Timeout} Interval for updating the feed
    */
   createSetInterval(feed) {
     const feedManager = new FeedManager(this, feed);
@@ -239,14 +258,18 @@ class FeedEmitter extends EventEmitter {
    * Side effects:
    * - Destroys the feed first
    * @private
-   * @param  {Feed} feed feed to be removed
+   * @param  {Feed} feed Feed to be removed
+   * @returns {Feed | undefined} Feed that was removed
    */
   removeFromFeedList(feed) {
     if (!feed) return;
 
     feed.destroy();
     const pos = this.feedList.findIndex((e) => e.url === feed.url);
-    this.feedList.splice(pos, 1);
+    if (pos !== -1) {
+      this.feedList.splice(pos, 1);
+      return feed;
+    }
   }
 }
 

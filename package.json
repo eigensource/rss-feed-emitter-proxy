@@ -49,7 +49,8 @@
   },
   "dependencies": {
     "feedparser": "1.1.4",
-    "request": "^2.88.2"
+    "https-proxy-agent": "^5.0.1",
+    "node-fetch": "2",
   },
   "nyc": {
     "all": true,
