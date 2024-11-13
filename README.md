@@ -26,25 +26,6 @@
   Track tons of feeds and receive events for every new item published with this super RSS News Feed aggregator.
 </p>
 
-## Tutorial
-
-This is a fully functional module, but its source code and repository are also a **super complete tutorial**, covering:
-
-1.  What to do first when creating a module from scratch
-2.  How to manage your module in Github and npm
-3.  ~~How to transpile your ES6 code into ES5~~ this went away in v3
-4.  How to create automated unit and integration tests
-5.  How to integrate them with Travis CI and make the build break if tests didn't pass
-6.  How to automatically test your module against various versions of Node.js
-7.  How to setup a code coverage tool and keep 100% coverage
-8.  How to integrate the coverage results with Coveralls
-9.  How to configure linting tools to make your code base consistent
-10. How to deploy to Github and npm with tags and releases
-
-If you're afraid to read the source code of the modules you use or to create your first module, this is the best chance you have to break this barrier :)
-
-**[Start here](https://github.com/filipedeschamps/rss-feed-emitter/issues/119)**
-
 ## Features
 
 - Supports Node.js `8.x` up through the current version of node.js
@@ -60,15 +41,17 @@ If you're afraid to read the source code of the modules you use or to create you
 
 ### Install
 
-```
-$ npm install rss-feed-emitter
+Download latest from releases in this repo and install with
+
+```bash
+pnpm add ./rss-feed-emitter-proxy-0.1.0.tgz # replace 0.1.0 with latest version
 ```
 
 ### Creating an instance
 
 ```js
-const RssFeedEmitter = require("rss-feed-emitter");
-const feeder = new RssFeedEmitter();
+const RssFeedEmitter = require("rss-feed-emitter-proxy");
+const feeder = new RssFeedEmitter({});
 ```
 
 #### Changing the user agent for requests
@@ -230,6 +213,8 @@ feeder.add({
 | :-----------------------------------------------------------------------------------------------------------------------------------------: |
 
 ## Author
+
+Fork by @eigensource
 
 | [<img src="https://avatars0.githubusercontent.com/u/4248081?v=3&s=115" width="155"><br><sub>@filipedeschamps</sub>](https://github.com/filipedeschamps) |
 | :-----------------------------------------------------------------------------------------------------------------------------------------------------: |
