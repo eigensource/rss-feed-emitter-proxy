@@ -3,6 +3,7 @@ declare module "rss-feed-emitter-proxy" {
     url: string;
     refresh?: number;
     userAgent?: string;
+    skipFirstLoad?: boolean;
   }
 
   interface EmitterOptions {
