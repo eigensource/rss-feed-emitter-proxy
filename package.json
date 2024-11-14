@@ -1,6 +1,6 @@
 {
   "name": "rss-feed-emitter-proxy",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Super RSS News Feed aggregator written in Node.js and ES6. Eigensource fork.",
   "main": "src/FeedEmitter.js",
   "types": "types/rss-feed-emitter-proxy.d.ts",

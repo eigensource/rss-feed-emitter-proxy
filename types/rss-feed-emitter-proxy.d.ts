@@ -4,11 +4,13 @@ declare module "rss-feed-emitter-proxy" {
     refresh?: number;
     userAgent?: string;
     skipFirstLoad?: boolean;
+    oxylabsProxyString?: string;
   }
 
   interface EmitterOptions {
     skipFirstLoad?: boolean;
     userAgent?: string;
+    oxylabsProxyString?: string;
   }
 
   class RssFeedEmitter {
